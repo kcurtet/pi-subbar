@@ -59,10 +59,12 @@ function selfDisarm(state: State): void {
 
 /** Footer: una línea ANSI con la barra; loading y error degradan con texto corto.
  *  Guard stale-ctx: pi puede invalidar el ctx sin session_shutdown (print mode,
- *  reemplazo huérfano) y los timers siguen vivos — selfDisarm como pi-sub. */
+ *  reemplazo huérfano) y los timers siguen vivos — selfDisarm como pi-sub.
+ *  Provider no soportado: se mantiene oculto (applyModel ya lo limpió). */
 function renderFooter(state: State): void {
 	const ctx = state.ctx;
 	if (!ctx) return;
+	if (!state.providerId || !providerFor(state.providerId)) return;
 	try {
 		const theme = ctx.ui.theme;
 		if (!theme?.fg) return;
@@ -101,14 +103,20 @@ async function fetchUsage(state: State): Promise<ZaiUsage | undefined> {
 		},
 		signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 	});
-	const body = await response.json();
+	if (!response.ok) throw new Error(`HTTP ${response.status} from ${provider.usageUrl}`);
+	let body: unknown;
+	try {
+		body = await response.json();
+	} catch {
+		throw new Error(`HTTP ${response.status}: body not JSON (usage endpoint)`);
+	}
 	return parseZaiUsage(body);
 }
 
 /** Fetch con dedup (in-flight + TTL) y guard de generación para sesiones reemplazadas. */
 async function refreshUsage(state: State, force: boolean): Promise<ZaiUsage | undefined> {
 	const ctx = state.ctx;
-	if (!ctx || !state.providerId) {
+	if (!ctx || !state.providerId || !providerFor(state.providerId)) {
 		renderFooter(state);
 		return undefined;
 	}
@@ -168,7 +176,9 @@ function applyModel(state: State, model: { provider?: string } | undefined): voi
 		state.generation++;
 	}
 	if (!nextId || !providerFor(nextId)) {
-		// Provider no soportado: ocultar el footer.
+		// Provider no soportado: ocultar el footer y parar timers (fetchTimer
+		// vivo refrescaría contra un provider sin endpoint → TypeError en loop).
+		stopTimers(state);
 		state.ctx?.ui.setStatus(STATUS_KEY, undefined);
 	}
 	renderFooter(state);
