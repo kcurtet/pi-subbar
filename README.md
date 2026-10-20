@@ -22,8 +22,10 @@ to pi's status-line API. Replaces the pi-sub footer for zai providers.
 ## Install
 
 ```
-pi install ../../dev/pi-subbar
+pi install git:github.com/kcurtet/pi-subbar
 ```
+
+Dev checkout: install the local clone instead (`pi install ../../dev/pi-subbar`) and run `pi update --extensions` after pushing changes for git installs.
 
 ## Test
 
