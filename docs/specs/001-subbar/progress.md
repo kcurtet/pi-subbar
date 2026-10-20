@@ -27,3 +27,12 @@ Spec: chat 2026-10-20, aprobada ("ok"). Fuente de diseño: better-claude plugins
 
 ## Pre-flight conflictos
 - Ninguno: tareas secuenciales, lib → index consume lib.
+
+## Review (fresco, pi -p glm-5.3, 2 pasadas)
+- Ronda 1: 4 important (HTTP ok check, providerFor! crash no-zai, timers vivos al salir de zai, loading visible en no-zai) — TODOS fixeados (commit fix(review)).
+- Minors diferidos: (a) /sub refresh no bypasea in-flight (fetch in-flight = dato fresco igualmente); (b) flash "GLM quota …" en transición zai→zai; (c) nit mensaje "body not JSON" con status 2xx.
+- Ronda 2: sin findings bloqueantes; guards verificados correctos.
+
+## Cierre
+- Task 1-4 completas. Suite 23/23. Smoke ollama+zai EXIT=0. Live API verificada.
+- Pendiente usuario: /reload o reinicio para ver footer en sesión interactiva.
