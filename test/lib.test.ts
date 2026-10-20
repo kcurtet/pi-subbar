@@ -183,3 +183,43 @@ test("formatResetClock: hora local HH:MM", () => {
 	const p = (n: number) => String(n).padStart(2, "0");
 	assert.equal(formatResetClock(ms), `${p(d.getHours())}:${p(d.getMinutes())}`);
 });
+
+// ---------------------------------------------------------------- providerFor()
+import { providerFor, subLines } from "../lib.ts";
+
+test("providerFor: mapea proveedores zai a su endpoint", () => {
+	assert.equal(providerFor("zai-coding-cn")?.usageUrl, "https://open.bigmodel.cn/api/monitor/usage/quota/limit");
+	assert.equal(providerFor("zai")?.usageUrl, "https://api.z.ai/api/monitor/usage/quota/limit");
+	assert.equal(providerFor("zai-anthropic")?.usageUrl, "https://api.z.ai/api/monitor/usage/quota/limit");
+	assert.equal(providerFor("ZAI"), undefined); // case-sensitive id de pi; sin match suelto
+	assert.equal(providerFor("openrouter"), undefined);
+	assert.equal(providerFor("ollama"), undefined);
+});
+
+// ---------------------------------------------------------------- subLines()
+test("subLines: tabla /sub con plan, ventanas y reset completo", () => {
+	const lines = subLines(
+		{
+			plan: "GLM Coding Plan (Max)",
+			fiveHour: { percent: 85, resetsAtMs: NOW + 125 * 60_000 },
+			weekly: { percent: 12, resetsAtMs: NOW + (3 * 24 + 2) * HOUR },
+			mcpMonthly: { percent: 30, resetsAtMs: NOW + 20 * 24 * HOUR },
+		},
+		NOW,
+	);
+	assert.ok(lines.some((l) => l.includes("GLM Coding Plan (Max)")), `plan: ${lines.join("|")}`);
+	const h5 = lines.find((l) => l.startsWith("5h"))!;
+	assert.ok(h5.includes("85%"), h5);
+	assert.ok(h5.includes("2h05m"), h5);
+	assert.ok(h5.includes(formatResetClock(NOW + 125 * 60_000)), h5);
+	const w7 = lines.find((l) => l.startsWith("7d"))!;
+	assert.ok(w7.includes("12%") && w7.includes("3d2h"), w7);
+	const mcp = lines.find((l) => l.startsWith("mcp"))!;
+	assert.ok(mcp.includes("30%"), mcp);
+});
+
+test("subLines: sin weekly/mcp los omite", () => {
+	const lines = subLines(usage({ weekly: undefined }), NOW);
+	assert.ok(!lines.some((l) => l.startsWith("7d")));
+	assert.ok(!lines.some((l) => l.startsWith("mcp")));
+});

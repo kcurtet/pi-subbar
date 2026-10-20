@@ -134,3 +134,52 @@ export function footerSegments(u: ZaiUsage, now: number): FooterSegment[] {
 	if (u.weekly) segs.push({ text: " ", color: "dim" }, ...windowSegments("7d", u.weekly, now));
 	return segs;
 }
+
+// ---------------------------------------------------------------- proveedores
+
+export interface ZaiProvider {
+	id: string;
+	usageUrl: string;
+	label: string;
+}
+
+const PROVIDERS: Record<string, ZaiProvider> = {
+	"zai-coding-cn": {
+		id: "zai-coding-cn",
+		usageUrl: "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
+		label: "GLM",
+	},
+	zai: { id: "zai", usageUrl: "https://api.z.ai/api/monitor/usage/quota/limit", label: "GLM" },
+	"zai-anthropic": { id: "zai-anthropic", usageUrl: "https://api.z.ai/api/monitor/usage/quota/limit", label: "GLM" },
+};
+
+/** Proveedor soportado para el id de provider del modelo activo (exacto). */
+export function providerFor(providerId: string): ZaiProvider | undefined {
+	return PROVIDERS[providerId] ?? undefined;
+}
+
+// ---------------------------------------------------------------- /sub
+
+function subLine(label: string, w: UsageWindow, now: number): string {
+	const expired = w.resetsAtMs !== undefined && w.resetsAtMs <= now;
+	const percent = expired ? 0 : w.percent;
+	const { filled, empty } = barCells(percent);
+	const bar = "━".repeat(filled) + "─".repeat(empty);
+	const reset =
+		w.resetsAtMs === undefined
+			? ""
+			: expired
+				? " · reset pendiente"
+				: ` · reset ${formatResetClock(w.resetsAtMs)} (${until(w.resetsAtMs - now)})`;
+	return `${label} ${bar} ${percent}%${reset}`;
+}
+
+/** Líneas de la tabla /sub. */
+export function subLines(u: ZaiUsage, now: number): string[] {
+	const lines: string[] = [];
+	if (u.plan) lines.push(u.plan);
+	lines.push(subLine("5h", u.fiveHour, now));
+	if (u.weekly) lines.push(subLine("7d", u.weekly, now));
+	if (u.mcpMonthly) lines.push(subLine("mcp", u.mcpMonthly, now));
+	return lines;
+}

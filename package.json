@@ -2,16 +2,24 @@
   "name": "pi-subbar",
   "version": "0.1.0",
   "description": "Sub-meter style progress bar footer for Z.ai/GLM coding-plan quota in pi",
-  "keywords": ["pi-package", "pi-extension", "zai", "quota"],
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "zai",
+    "quota"
+  ],
   "license": "MIT",
   "repository": "github:kcurtet/pi-subbar",
   "pi": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
   },
   "scripts": {
     "test": "node --test 'test/*.test.ts'"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
-  }
+  },
+  "type": "module"
 }
