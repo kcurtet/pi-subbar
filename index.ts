@@ -57,27 +57,33 @@ function selfDisarm(state: State): void {
 	state.ctx = undefined;
 }
 
-/** Footer: una línea ANSI con la barra; loading y error degradan con texto corto. */
+/** Footer: una línea ANSI con la barra; loading y error degradan con texto corto.
+ *  Guard stale-ctx: pi puede invalidar el ctx sin session_shutdown (print mode,
+ *  reemplazo huérfano) y los timers siguen vivos — selfDisarm como pi-sub. */
 function renderFooter(state: State): void {
 	const ctx = state.ctx;
 	if (!ctx) return;
-	const theme = ctx.ui.theme;
-	if (!theme?.fg) return;
-	let line: string;
-	let color: "dim" | "warning" = "dim";
-	if (state.error) {
-		line = `subbar ${state.error.slice(0, 60)}`;
-		color = "warning";
-	} else if (!state.usage) {
-		line = "GLM quota …";
-	} else {
-		line = footerSegments(state.usage, Date.now())
-			.map((s) => theme.fg(s.color, s.text))
-			.join("");
-		ctx.ui.setStatus(STATUS_KEY, line);
-		return;
+	try {
+		const theme = ctx.ui.theme;
+		if (!theme?.fg) return;
+		let line: string;
+		let color: "dim" | "warning" = "dim";
+		if (state.error) {
+			line = `subbar ${state.error.slice(0, 60)}`;
+			color = "warning";
+		} else if (!state.usage) {
+			line = "GLM quota …";
+		} else {
+			line = footerSegments(state.usage, Date.now())
+				.map((s) => theme.fg(s.color, s.text))
+				.join("");
+			ctx.ui.setStatus(STATUS_KEY, line);
+			return;
+		}
+		ctx.ui.setStatus(STATUS_KEY, theme.fg(color, line));
+	} catch (error) {
+		if (isStaleCtxError(error)) selfDisarm(state);
 	}
-	ctx.ui.setStatus(STATUS_KEY, theme.fg(color, line));
 }
 
 async function fetchUsage(state: State): Promise<ZaiUsage | undefined> {
